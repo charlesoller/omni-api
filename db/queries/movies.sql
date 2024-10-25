@@ -33,3 +33,8 @@ RETURNING *;
 UPDATE movies 
 SET embedding = $2
 WHERE id = $1;
+
+-- name: GetAllMovies :many
+SELECT * FROM movies
+ORDER BY id
+LIMIT $1 OFFSET $2;
