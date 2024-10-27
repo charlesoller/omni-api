@@ -2,8 +2,10 @@ package movie
 
 import (
 	"context"
+
 	"github.com/charlesoller/omni-api/internal/database"
 	"github.com/charlesoller/omni-api/internal/db"
+	"github.com/pgvector/pgvector-go"
 )
 
 type MovieRepository struct {
@@ -35,4 +37,12 @@ func (r *MovieRepository) GetMovie (ctx context.Context, id int32) (*db.Movie, e
 		return nil, err
 	}
 	return &movie, nil
+}
+
+func (r *MovieRepository) GetSimilarMovies (ctx context.Context, embedding *pgvector.Vector) ([]db.Movie, error) {
+	movies, err := r.db.Q.FindSimilarMovies(ctx, *embedding)
+	if err != nil {
+		return nil, err
+	}
+	return movies, nil
 }

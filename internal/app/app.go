@@ -3,16 +3,32 @@ package app
 import (
 	"log"
 	"net/http"
+	"fmt"
 	_ "net/http/pprof"
 
 	"github.com/charlesoller/omni-api/internal/database"
 	"github.com/charlesoller/omni-api/internal/db"
 	"github.com/charlesoller/omni-api/internal/movie"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func Setup() *echo.Echo {
 	e := echo.New()
+
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus: true,
+		LogURI:    true,
+		BeforeNextFunc: func(c echo.Context) {
+			c.Set("customValueFromContext", 42)
+		},
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			value, _ := c.Get("customValueFromContext").(int)
+			fmt.Printf("REQUEST: uri: %v, status: %v, custom-value: %v\n", v.URI, v.Status, value)
+			return nil
+		},
+	}))
+
 	api := e.Group("/api")
 
 	e.GET("/", func(c echo.Context) error {
@@ -45,7 +61,7 @@ func Setup() *echo.Echo {
 	movieRoutes := api.Group("/movies")
 
 	// Registering Routes
-	movieRouter.RegisterRoutes(movieRoutes) // Register movie routes
+	movieRouter.RegisterRoutes(movieRoutes)
 
 	return e
 }

@@ -42,3 +42,9 @@ LIMIT $1 OFFSET $2;
 -- name: GetMovie :one
 SELECT * FROM movies
 WHERE id = $1;
+
+-- name: FindSimilarMovies :many
+SELECT *
+FROM movies
+ORDER BY embedding <=> $1
+LIMIT 5; 

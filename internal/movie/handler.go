@@ -4,8 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
 	"strconv"
+
+	"github.com/labstack/echo/v4"
+	"github.com/pgvector/pgvector-go"
 )
 
 type MovieHandler struct {
@@ -53,4 +55,21 @@ func (h *MovieHandler) GetMovieHandler(c echo.Context) error {
 		}
 		
 		return c.JSON(http.StatusOK, movie)
+}
+
+func (h *MovieHandler) GetSimilarMoviesHandler(c echo.Context) error {
+	ctx := context.Background()
+
+	v := new(pgvector.Vector)
+	err := c.Bind(&v)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	movies, err := h.s.GetSimilarMovies(ctx, v)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, movies)
 }

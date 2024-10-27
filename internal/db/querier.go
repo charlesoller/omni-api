@@ -6,9 +6,12 @@ package db
 
 import (
 	"context"
+
+	pgvector_go "github.com/pgvector/pgvector-go"
 )
 
 type Querier interface {
+	FindSimilarMovies(ctx context.Context, embedding pgvector_go.Vector) ([]Movie, error)
 	GetAllMovies(ctx context.Context, arg GetAllMoviesParams) ([]Movie, error)
 	GetMovie(ctx context.Context, id int32) (Movie, error)
 	UpdateMovieEmbedding(ctx context.Context, arg UpdateMovieEmbeddingParams) error

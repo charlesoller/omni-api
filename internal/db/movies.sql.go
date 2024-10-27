@@ -12,6 +12,57 @@ import (
 	pgvector_go "github.com/pgvector/pgvector-go"
 )
 
+const findSimilarMovies = `-- name: FindSimilarMovies :many
+SELECT id, title, original_title, overview, release_date, runtime, budget, revenue, popularity, vote_average, vote_count, status, tagline, homepage, original_language, adult, backdrop_path, poster_path, collection_id, embedding
+FROM movies
+ORDER BY embedding <=> $1
+LIMIT 5
+`
+
+func (q *Queries) FindSimilarMovies(ctx context.Context, embedding pgvector_go.Vector) ([]Movie, error) {
+	rows, err := q.query(ctx, q.findSimilarMoviesStmt, findSimilarMovies, embedding)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Movie
+	for rows.Next() {
+		var i Movie
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.OriginalTitle,
+			&i.Overview,
+			&i.ReleaseDate,
+			&i.Runtime,
+			&i.Budget,
+			&i.Revenue,
+			&i.Popularity,
+			&i.VoteAverage,
+			&i.VoteCount,
+			&i.Status,
+			&i.Tagline,
+			&i.Homepage,
+			&i.OriginalLanguage,
+			&i.Adult,
+			&i.BackdropPath,
+			&i.PosterPath,
+			&i.CollectionID,
+			&i.Embedding,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllMovies = `-- name: GetAllMovies :many
 SELECT id, title, original_title, overview, release_date, runtime, budget, revenue, popularity, vote_average, vote_count, status, tagline, homepage, original_language, adult, backdrop_path, poster_path, collection_id, embedding FROM movies
 ORDER BY id

@@ -24,6 +24,9 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.findSimilarMoviesStmt, err = db.PrepareContext(ctx, findSimilarMovies); err != nil {
+		return nil, fmt.Errorf("error preparing query FindSimilarMovies: %w", err)
+	}
 	if q.getAllMoviesStmt, err = db.PrepareContext(ctx, getAllMovies); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllMovies: %w", err)
 	}
@@ -86,6 +89,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
+	if q.findSimilarMoviesStmt != nil {
+		if cerr := q.findSimilarMoviesStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing findSimilarMoviesStmt: %w", cerr)
+		}
+	}
 	if q.getAllMoviesStmt != nil {
 		if cerr := q.getAllMoviesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAllMoviesStmt: %w", cerr)
@@ -220,6 +228,7 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                               DBTX
 	tx                               *sql.Tx
+	findSimilarMoviesStmt            *sql.Stmt
 	getAllMoviesStmt                 *sql.Stmt
 	getMovieStmt                     *sql.Stmt
 	updateMovieEmbeddingStmt         *sql.Stmt
@@ -245,6 +254,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                               tx,
 		tx:                               tx,
+		findSimilarMoviesStmt:            q.findSimilarMoviesStmt,
 		getAllMoviesStmt:                 q.getAllMoviesStmt,
 		getMovieStmt:                     q.getMovieStmt,
 		updateMovieEmbeddingStmt:         q.updateMovieEmbeddingStmt,
