@@ -33,6 +33,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getMovieStmt, err = db.PrepareContext(ctx, getMovie); err != nil {
 		return nil, fmt.Errorf("error preparing query GetMovie: %w", err)
 	}
+	if q.getMovieDetailsStmt, err = db.PrepareContext(ctx, getMovieDetails); err != nil {
+		return nil, fmt.Errorf("error preparing query GetMovieDetails: %w", err)
+	}
 	if q.updateMovieEmbeddingStmt, err = db.PrepareContext(ctx, updateMovieEmbedding); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateMovieEmbedding: %w", err)
 	}
@@ -102,6 +105,11 @@ func (q *Queries) Close() error {
 	if q.getMovieStmt != nil {
 		if cerr := q.getMovieStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getMovieStmt: %w", cerr)
+		}
+	}
+	if q.getMovieDetailsStmt != nil {
+		if cerr := q.getMovieDetailsStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getMovieDetailsStmt: %w", cerr)
 		}
 	}
 	if q.updateMovieEmbeddingStmt != nil {
@@ -231,6 +239,7 @@ type Queries struct {
 	findSimilarMoviesStmt            *sql.Stmt
 	getAllMoviesStmt                 *sql.Stmt
 	getMovieStmt                     *sql.Stmt
+	getMovieDetailsStmt              *sql.Stmt
 	updateMovieEmbeddingStmt         *sql.Stmt
 	upsertCastMemberStmt             *sql.Stmt
 	upsertCollectionStmt             *sql.Stmt
@@ -257,6 +266,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		findSimilarMoviesStmt:            q.findSimilarMoviesStmt,
 		getAllMoviesStmt:                 q.getAllMoviesStmt,
 		getMovieStmt:                     q.getMovieStmt,
+		getMovieDetailsStmt:              q.getMovieDetailsStmt,
 		updateMovieEmbeddingStmt:         q.updateMovieEmbeddingStmt,
 		upsertCastMemberStmt:             q.upsertCastMemberStmt,
 		upsertCollectionStmt:             q.upsertCollectionStmt,

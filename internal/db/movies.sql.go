@@ -7,16 +7,16 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	pgvector_go "github.com/pgvector/pgvector-go"
 )
 
 const findSimilarMovies = `-- name: FindSimilarMovies :many
-SELECT id, title, original_title, overview, release_date, runtime, budget, revenue, popularity, vote_average, vote_count, status, tagline, homepage, original_language, adult, backdrop_path, poster_path, collection_id, embedding
-FROM movies
+SELECT id, title, original_title, overview, release_date, runtime, budget, revenue, popularity, vote_average, vote_count, status, tagline, homepage, original_language, adult, backdrop_path, poster_path, collection_id, embedding FROM movies
 ORDER BY embedding <=> $1
-LIMIT 5
+LIMIT 10
 `
 
 func (q *Queries) FindSimilarMovies(ctx context.Context, embedding pgvector_go.Vector) ([]Movie, error) {
@@ -147,6 +147,174 @@ func (q *Queries) GetMovie(ctx context.Context, id int32) (Movie, error) {
 		&i.PosterPath,
 		&i.CollectionID,
 		&i.Embedding,
+	)
+	return i, err
+}
+
+const getMovieDetails = `-- name: GetMovieDetails :one
+WITH cast_members_agg AS (
+  SELECT 
+    credits_cast_member.credit_id,
+    json_agg(
+      json_build_object(
+        'id', cast_members.id,
+        'name', cast_members.name,
+        'profile_path', cast_members.profile_path
+      )
+    ) AS cast_members
+  FROM credits_cast_member
+  JOIN cast_members ON credits_cast_member.member_id = cast_members.id
+  GROUP BY credits_cast_member.credit_id
+),
+crew_members_agg AS (
+  SELECT 
+    credits_crew_member.credit_id,
+    json_agg(
+      json_build_object(
+        'id', crew_members.id,
+        'name', crew_members.name,
+        'profile_path', crew_members.profile_path
+      )
+    ) AS crew_members
+  FROM credits_crew_member
+  JOIN crew_members ON credits_crew_member.member_id = crew_members.id
+  GROUP BY credits_crew_member.credit_id
+),
+genres_agg AS (
+  SELECT 
+    movie_id,
+    json_agg(
+      json_build_object(
+        'id', genres.id,
+        'name', genres.name
+      )
+    ) AS genres
+  FROM movie_genres
+  JOIN genres ON movie_genres.genre_id = genres.id
+  GROUP BY movie_id
+),
+countries_agg AS (
+  SELECT 
+    movie_id,
+    json_agg(
+      json_build_object(
+        'name', countries.name
+      )
+    ) AS countries
+  FROM movie_countries
+  JOIN countries ON movie_countries.country_id = countries.iso_3166_1
+  GROUP BY movie_id
+),
+languages_agg AS (
+  SELECT 
+    movie_id,
+    json_agg(
+      json_build_object(
+        'name', languages.name,
+        'english_name', languages.english_name
+      )
+    ) AS languages
+  FROM movie_languages
+  JOIN languages ON movie_languages.language_id = languages.iso_639_1
+  GROUP BY movie_id
+),
+production_companies_agg AS (
+  SELECT 
+    movie_id,
+    json_agg(
+      json_build_object(
+        'name', production_companies.name,
+        'logo_path', production_companies.logo_path
+      )
+    ) AS production_companies
+  FROM movie_production_companies
+  JOIN production_companies ON movie_production_companies.company_id = production_companies.id
+  GROUP BY movie_id
+)
+SELECT 
+  movies.id,
+  movies.title,
+  movies.overview,
+  movies.backdrop_path,
+  movies.budget,
+  movies.popularity,
+  movies.poster_path,
+  movies.release_date,
+  movies.revenue,
+  movies.runtime,
+  movies.vote_average,
+  movies.vote_count,
+  movies.status,
+  COALESCE(collections.name, '') AS collection_name,
+  COALESCE(collections.poster_path, '') AS collection_poster_path,
+  COALESCE(cast_members_agg.cast_members, '[]'::json) AS cast_members,
+  COALESCE(crew_members_agg.crew_members, '[]'::json) AS crew_members,
+  COALESCE(genres_agg.genres, '[]'::json) AS genres,
+  COALESCE(countries_agg.countries, '[]'::json) AS countries,
+  COALESCE(languages_agg.languages, '[]'::json) AS languages,
+  COALESCE(production_companies_agg.production_companies, '[]'::json) AS production_companies
+FROM 
+  movies
+LEFT JOIN collections ON movies.collection_id = collections.id
+LEFT JOIN cast_members_agg ON cast_members_agg.credit_id = movies.id
+LEFT JOIN crew_members_agg ON crew_members_agg.credit_id = movies.id
+LEFT JOIN genres_agg ON genres_agg.movie_id = movies.id
+LEFT JOIN countries_agg ON countries_agg.movie_id = movies.id
+LEFT JOIN languages_agg ON languages_agg.movie_id = movies.id
+LEFT JOIN production_companies_agg ON production_companies_agg.movie_id = movies.id
+WHERE
+  movies.id = $1
+`
+
+type GetMovieDetailsRow struct {
+	ID                   int32           `json:"id"`
+	Title                string          `json:"title"`
+	Overview             string          `json:"overview"`
+	BackdropPath         string          `json:"backdrop_path"`
+	Budget               int64           `json:"budget"`
+	Popularity           float64         `json:"popularity"`
+	PosterPath           string          `json:"poster_path"`
+	ReleaseDate          time.Time       `json:"release_date"`
+	Revenue              int64           `json:"revenue"`
+	Runtime              int32           `json:"runtime"`
+	VoteAverage          float64         `json:"vote_average"`
+	VoteCount            int32           `json:"vote_count"`
+	Status               string          `json:"status"`
+	CollectionName       string          `json:"collection_name"`
+	CollectionPosterPath string          `json:"collection_poster_path"`
+	CastMembers          json.RawMessage `json:"cast_members"`
+	CrewMembers          json.RawMessage `json:"crew_members"`
+	Genres               json.RawMessage `json:"genres"`
+	Countries            json.RawMessage `json:"countries"`
+	Languages            json.RawMessage `json:"languages"`
+	ProductionCompanies  json.RawMessage `json:"production_companies"`
+}
+
+func (q *Queries) GetMovieDetails(ctx context.Context, id int32) (GetMovieDetailsRow, error) {
+	row := q.queryRow(ctx, q.getMovieDetailsStmt, getMovieDetails, id)
+	var i GetMovieDetailsRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Overview,
+		&i.BackdropPath,
+		&i.Budget,
+		&i.Popularity,
+		&i.PosterPath,
+		&i.ReleaseDate,
+		&i.Revenue,
+		&i.Runtime,
+		&i.VoteAverage,
+		&i.VoteCount,
+		&i.Status,
+		&i.CollectionName,
+		&i.CollectionPosterPath,
+		&i.CastMembers,
+		&i.CrewMembers,
+		&i.Genres,
+		&i.Countries,
+		&i.Languages,
+		&i.ProductionCompanies,
 	)
 	return i, err
 }

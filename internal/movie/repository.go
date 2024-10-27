@@ -39,6 +39,14 @@ func (r *MovieRepository) GetMovie (ctx context.Context, id int32) (*db.Movie, e
 	return &movie, nil
 }
 
+func (r *MovieRepository) GetMovieDetails (ctx context.Context, id int32) (*db.GetMovieDetailsRow, error) {
+	movie, err := r.db.Q.GetMovieDetails(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &movie, nil
+}
+
 func (r *MovieRepository) GetSimilarMovies (ctx context.Context, embedding *pgvector.Vector) ([]db.Movie, error) {
 	movies, err := r.db.Q.FindSimilarMovies(ctx, *embedding)
 	if err != nil {

@@ -57,6 +57,22 @@ func (h *MovieHandler) GetMovieHandler(c echo.Context) error {
 		return c.JSON(http.StatusOK, movie)
 }
 
+func (h *MovieHandler) GetMovieDetailsHandler(c echo.Context) error {
+	ctx := context.Background()
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil || id < 1 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	movie, err := h.s.GetMovieDetails(ctx, int32(id))
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+	}
+	
+	return c.JSON(http.StatusOK, movie)
+}
+
 func (h *MovieHandler) GetSimilarMoviesHandler(c echo.Context) error {
 	ctx := context.Background()
 

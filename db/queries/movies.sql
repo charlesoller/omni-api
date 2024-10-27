@@ -44,7 +44,120 @@ SELECT * FROM movies
 WHERE id = $1;
 
 -- name: FindSimilarMovies :many
-SELECT *
-FROM movies
+SELECT * FROM movies
 ORDER BY embedding <=> $1
-LIMIT 5; 
+LIMIT 10; 
+
+-- name: GetMovieDetails :one
+WITH cast_members_agg AS (
+  SELECT 
+    credits_cast_member.credit_id,
+    json_agg(
+      json_build_object(
+        'id', cast_members.id,
+        'name', cast_members.name,
+        'profile_path', cast_members.profile_path
+      )
+    ) AS cast_members
+  FROM credits_cast_member
+  JOIN cast_members ON credits_cast_member.member_id = cast_members.id
+  GROUP BY credits_cast_member.credit_id
+),
+crew_members_agg AS (
+  SELECT 
+    credits_crew_member.credit_id,
+    json_agg(
+      json_build_object(
+        'id', crew_members.id,
+        'name', crew_members.name,
+        'profile_path', crew_members.profile_path
+      )
+    ) AS crew_members
+  FROM credits_crew_member
+  JOIN crew_members ON credits_crew_member.member_id = crew_members.id
+  GROUP BY credits_crew_member.credit_id
+),
+genres_agg AS (
+  SELECT 
+    movie_id,
+    json_agg(
+      json_build_object(
+        'id', genres.id,
+        'name', genres.name
+      )
+    ) AS genres
+  FROM movie_genres
+  JOIN genres ON movie_genres.genre_id = genres.id
+  GROUP BY movie_id
+),
+countries_agg AS (
+  SELECT 
+    movie_id,
+    json_agg(
+      json_build_object(
+        'name', countries.name
+      )
+    ) AS countries
+  FROM movie_countries
+  JOIN countries ON movie_countries.country_id = countries.iso_3166_1
+  GROUP BY movie_id
+),
+languages_agg AS (
+  SELECT 
+    movie_id,
+    json_agg(
+      json_build_object(
+        'name', languages.name,
+        'english_name', languages.english_name
+      )
+    ) AS languages
+  FROM movie_languages
+  JOIN languages ON movie_languages.language_id = languages.iso_639_1
+  GROUP BY movie_id
+),
+production_companies_agg AS (
+  SELECT 
+    movie_id,
+    json_agg(
+      json_build_object(
+        'name', production_companies.name,
+        'logo_path', production_companies.logo_path
+      )
+    ) AS production_companies
+  FROM movie_production_companies
+  JOIN production_companies ON movie_production_companies.company_id = production_companies.id
+  GROUP BY movie_id
+)
+SELECT 
+  movies.id,
+  movies.title,
+  movies.overview,
+  movies.backdrop_path,
+  movies.budget,
+  movies.popularity,
+  movies.poster_path,
+  movies.release_date,
+  movies.revenue,
+  movies.runtime,
+  movies.vote_average,
+  movies.vote_count,
+  movies.status,
+  COALESCE(collections.name, '') AS collection_name,
+  COALESCE(collections.poster_path, '') AS collection_poster_path,
+  COALESCE(cast_members_agg.cast_members, '[]'::json) AS cast_members,
+  COALESCE(crew_members_agg.crew_members, '[]'::json) AS crew_members,
+  COALESCE(genres_agg.genres, '[]'::json) AS genres,
+  COALESCE(countries_agg.countries, '[]'::json) AS countries,
+  COALESCE(languages_agg.languages, '[]'::json) AS languages,
+  COALESCE(production_companies_agg.production_companies, '[]'::json) AS production_companies
+FROM 
+  movies
+LEFT JOIN collections ON movies.collection_id = collections.id
+LEFT JOIN cast_members_agg ON cast_members_agg.credit_id = movies.id
+LEFT JOIN crew_members_agg ON crew_members_agg.credit_id = movies.id
+LEFT JOIN genres_agg ON genres_agg.movie_id = movies.id
+LEFT JOIN countries_agg ON countries_agg.movie_id = movies.id
+LEFT JOIN languages_agg ON languages_agg.movie_id = movies.id
+LEFT JOIN production_companies_agg ON production_companies_agg.movie_id = movies.id
+WHERE
+  movies.id = $1;

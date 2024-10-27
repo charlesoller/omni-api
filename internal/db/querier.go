@@ -14,6 +14,7 @@ type Querier interface {
 	FindSimilarMovies(ctx context.Context, embedding pgvector_go.Vector) ([]Movie, error)
 	GetAllMovies(ctx context.Context, arg GetAllMoviesParams) ([]Movie, error)
 	GetMovie(ctx context.Context, id int32) (Movie, error)
+	GetMovieDetails(ctx context.Context, id int32) (GetMovieDetailsRow, error)
 	UpdateMovieEmbedding(ctx context.Context, arg UpdateMovieEmbeddingParams) error
 	UpsertCastMember(ctx context.Context, arg UpsertCastMemberParams) (CastMember, error)
 	UpsertCollection(ctx context.Context, arg UpsertCollectionParams) (Collection, error)
