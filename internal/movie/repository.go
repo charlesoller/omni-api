@@ -28,3 +28,11 @@ func (r *MovieRepository) GetAllMovies(ctx context.Context, offset int32, limit 
 	}
 	return movies, nil
 }
+
+func (r *MovieRepository) GetMovie (ctx context.Context, id int32) (*db.Movie, error) {
+	movie, err := r.db.Q.GetMovie(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &movie, nil
+}

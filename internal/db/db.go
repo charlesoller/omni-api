@@ -27,6 +27,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getAllMoviesStmt, err = db.PrepareContext(ctx, getAllMovies); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllMovies: %w", err)
 	}
+	if q.getMovieStmt, err = db.PrepareContext(ctx, getMovie); err != nil {
+		return nil, fmt.Errorf("error preparing query GetMovie: %w", err)
+	}
 	if q.updateMovieEmbeddingStmt, err = db.PrepareContext(ctx, updateMovieEmbedding); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateMovieEmbedding: %w", err)
 	}
@@ -86,6 +89,11 @@ func (q *Queries) Close() error {
 	if q.getAllMoviesStmt != nil {
 		if cerr := q.getAllMoviesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getAllMoviesStmt: %w", cerr)
+		}
+	}
+	if q.getMovieStmt != nil {
+		if cerr := q.getMovieStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getMovieStmt: %w", cerr)
 		}
 	}
 	if q.updateMovieEmbeddingStmt != nil {
@@ -213,6 +221,7 @@ type Queries struct {
 	db                               DBTX
 	tx                               *sql.Tx
 	getAllMoviesStmt                 *sql.Stmt
+	getMovieStmt                     *sql.Stmt
 	updateMovieEmbeddingStmt         *sql.Stmt
 	upsertCastMemberStmt             *sql.Stmt
 	upsertCollectionStmt             *sql.Stmt
@@ -237,6 +246,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		db:                               tx,
 		tx:                               tx,
 		getAllMoviesStmt:                 q.getAllMoviesStmt,
+		getMovieStmt:                     q.getMovieStmt,
 		updateMovieEmbeddingStmt:         q.updateMovieEmbeddingStmt,
 		upsertCastMemberStmt:             q.upsertCastMemberStmt,
 		upsertCollectionStmt:             q.upsertCollectionStmt,

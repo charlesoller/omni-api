@@ -25,3 +25,11 @@ func (s *MovieService) GetAllMovies(ctx context.Context, page int32, limit int32
 	}
 	return movies, nil
 }
+
+func (s *MovieService) GetMovie(ctx context.Context, id int32) (*db.Movie, error) {
+	movie, err := s.r.GetMovie(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return movie, nil
+}

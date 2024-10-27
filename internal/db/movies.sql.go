@@ -67,6 +67,39 @@ func (q *Queries) GetAllMovies(ctx context.Context, arg GetAllMoviesParams) ([]M
 	return items, nil
 }
 
+const getMovie = `-- name: GetMovie :one
+SELECT id, title, original_title, overview, release_date, runtime, budget, revenue, popularity, vote_average, vote_count, status, tagline, homepage, original_language, adult, backdrop_path, poster_path, collection_id, embedding FROM movies
+WHERE id = $1
+`
+
+func (q *Queries) GetMovie(ctx context.Context, id int32) (Movie, error) {
+	row := q.queryRow(ctx, q.getMovieStmt, getMovie, id)
+	var i Movie
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.OriginalTitle,
+		&i.Overview,
+		&i.ReleaseDate,
+		&i.Runtime,
+		&i.Budget,
+		&i.Revenue,
+		&i.Popularity,
+		&i.VoteAverage,
+		&i.VoteCount,
+		&i.Status,
+		&i.Tagline,
+		&i.Homepage,
+		&i.OriginalLanguage,
+		&i.Adult,
+		&i.BackdropPath,
+		&i.PosterPath,
+		&i.CollectionID,
+		&i.Embedding,
+	)
+	return i, err
+}
+
 const updateMovieEmbedding = `-- name: UpdateMovieEmbedding :exec
 UPDATE movies 
 SET embedding = $2

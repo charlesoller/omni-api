@@ -10,6 +10,7 @@ import (
 
 type Querier interface {
 	GetAllMovies(ctx context.Context, arg GetAllMoviesParams) ([]Movie, error)
+	GetMovie(ctx context.Context, id int32) (Movie, error)
 	UpdateMovieEmbedding(ctx context.Context, arg UpdateMovieEmbeddingParams) error
 	UpsertCastMember(ctx context.Context, arg UpsertCastMemberParams) (CastMember, error)
 	UpsertCollection(ctx context.Context, arg UpsertCollectionParams) (Collection, error)

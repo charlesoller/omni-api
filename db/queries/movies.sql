@@ -38,3 +38,7 @@ WHERE id = $1;
 SELECT * FROM movies
 ORDER BY id
 LIMIT $1 OFFSET $2;
+
+-- name: GetMovie :one
+SELECT * FROM movies
+WHERE id = $1;
