@@ -16,6 +16,7 @@ func NewMovieRouter(handler *MovieHandler) *MovieRouter {
 
 func (r *MovieRouter)RegisterRoutes(e *echo.Group) {
 	e.GET("", r.h.GetAllMoviesHandler)
+	e.GET("/random", r.h.GetRandomMovieHandler)
 	e.GET("/:id", r.h.GetMovieHandler)
 	e.GET("/:id/details", r.h.GetMovieDetailsHandler)
 

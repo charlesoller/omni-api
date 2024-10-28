@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 const findSimilarMovies = `-- name: FindSimilarMovies :many
 SELECT id, title, original_title, overview, release_date, runtime, budget, revenue, popularity, vote_average, vote_count, status, tagline, homepage, original_language, adult, backdrop_path, poster_path, collection_id, embedding FROM movies
 ORDER BY embedding <=> $1
-LIMIT 10
+LIMIT 30
 `
 
 func (q *Queries) FindSimilarMovies(ctx context.Context, embedding pgvector_go.Vector) ([]Movie, error) {
@@ -315,6 +316,99 @@ func (q *Queries) GetMovieDetails(ctx context.Context, id int32) (GetMovieDetail
 		&i.Countries,
 		&i.Languages,
 		&i.ProductionCompanies,
+	)
+	return i, err
+}
+
+const getMoviesByName = `-- name: GetMoviesByName :many
+SELECT id, title, original_title, overview, release_date, runtime, budget, revenue, popularity, vote_average, vote_count, status, tagline, homepage, original_language, adult, backdrop_path, poster_path, collection_id, embedding
+FROM movies
+WHERE title ILIKE '%' || $1 || '%'
+ORDER BY popularity DESC
+LIMIT $2 OFFSET $3
+`
+
+type GetMoviesByNameParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	Limit   int32          `json:"limit"`
+	Offset  int32          `json:"offset"`
+}
+
+func (q *Queries) GetMoviesByName(ctx context.Context, arg GetMoviesByNameParams) ([]Movie, error) {
+	rows, err := q.query(ctx, q.getMoviesByNameStmt, getMoviesByName, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Movie
+	for rows.Next() {
+		var i Movie
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.OriginalTitle,
+			&i.Overview,
+			&i.ReleaseDate,
+			&i.Runtime,
+			&i.Budget,
+			&i.Revenue,
+			&i.Popularity,
+			&i.VoteAverage,
+			&i.VoteCount,
+			&i.Status,
+			&i.Tagline,
+			&i.Homepage,
+			&i.OriginalLanguage,
+			&i.Adult,
+			&i.BackdropPath,
+			&i.PosterPath,
+			&i.CollectionID,
+			&i.Embedding,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRandomMovie = `-- name: GetRandomMovie :one
+SELECT id, title, original_title, overview, release_date, runtime, budget, revenue, popularity, vote_average, vote_count, status, tagline, homepage, original_language, adult, backdrop_path, poster_path, collection_id, embedding
+FROM movies
+ORDER BY RANDOM()
+LIMIT 1
+`
+
+func (q *Queries) GetRandomMovie(ctx context.Context) (Movie, error) {
+	row := q.queryRow(ctx, q.getRandomMovieStmt, getRandomMovie)
+	var i Movie
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.OriginalTitle,
+		&i.Overview,
+		&i.ReleaseDate,
+		&i.Runtime,
+		&i.Budget,
+		&i.Revenue,
+		&i.Popularity,
+		&i.VoteAverage,
+		&i.VoteCount,
+		&i.Status,
+		&i.Tagline,
+		&i.Homepage,
+		&i.OriginalLanguage,
+		&i.Adult,
+		&i.BackdropPath,
+		&i.PosterPath,
+		&i.CollectionID,
+		&i.Embedding,
 	)
 	return i, err
 }

@@ -2,6 +2,7 @@ package movie
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/charlesoller/omni-api/internal/database"
 	"github.com/charlesoller/omni-api/internal/db"
@@ -31,8 +32,34 @@ func (r *MovieRepository) GetAllMovies(ctx context.Context, offset int32, limit 
 	return movies, nil
 }
 
+func (r *MovieRepository) GetAllMoviesMatchingSearch(ctx context.Context, offset int32, limit int32, search string) ([]db.Movie, error) {
+	p := db.GetMoviesByNameParams {
+		Limit: limit,
+		Offset: offset,
+		Column1: sql.NullString{
+			Valid: true,
+			String: search,
+		},
+	}
+
+	movies, err := r.db.Q.GetMoviesByName(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+
+	return movies, nil
+}
+
 func (r *MovieRepository) GetMovie (ctx context.Context, id int32) (*db.Movie, error) {
 	movie, err := r.db.Q.GetMovie(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &movie, nil
+}
+
+func (r *MovieRepository) GetRandomMovie (ctx context.Context) (*db.Movie, error) {
+	movie, err := r.db.Q.GetRandomMovie(ctx)
 	if err != nil {
 		return nil, err
 	}

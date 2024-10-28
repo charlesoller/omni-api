@@ -36,6 +36,12 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getMovieDetailsStmt, err = db.PrepareContext(ctx, getMovieDetails); err != nil {
 		return nil, fmt.Errorf("error preparing query GetMovieDetails: %w", err)
 	}
+	if q.getMoviesByNameStmt, err = db.PrepareContext(ctx, getMoviesByName); err != nil {
+		return nil, fmt.Errorf("error preparing query GetMoviesByName: %w", err)
+	}
+	if q.getRandomMovieStmt, err = db.PrepareContext(ctx, getRandomMovie); err != nil {
+		return nil, fmt.Errorf("error preparing query GetRandomMovie: %w", err)
+	}
 	if q.updateMovieEmbeddingStmt, err = db.PrepareContext(ctx, updateMovieEmbedding); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateMovieEmbedding: %w", err)
 	}
@@ -110,6 +116,16 @@ func (q *Queries) Close() error {
 	if q.getMovieDetailsStmt != nil {
 		if cerr := q.getMovieDetailsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getMovieDetailsStmt: %w", cerr)
+		}
+	}
+	if q.getMoviesByNameStmt != nil {
+		if cerr := q.getMoviesByNameStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getMoviesByNameStmt: %w", cerr)
+		}
+	}
+	if q.getRandomMovieStmt != nil {
+		if cerr := q.getRandomMovieStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getRandomMovieStmt: %w", cerr)
 		}
 	}
 	if q.updateMovieEmbeddingStmt != nil {
@@ -240,6 +256,8 @@ type Queries struct {
 	getAllMoviesStmt                 *sql.Stmt
 	getMovieStmt                     *sql.Stmt
 	getMovieDetailsStmt              *sql.Stmt
+	getMoviesByNameStmt              *sql.Stmt
+	getRandomMovieStmt               *sql.Stmt
 	updateMovieEmbeddingStmt         *sql.Stmt
 	upsertCastMemberStmt             *sql.Stmt
 	upsertCollectionStmt             *sql.Stmt
@@ -267,6 +285,8 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getAllMoviesStmt:                 q.getAllMoviesStmt,
 		getMovieStmt:                     q.getMovieStmt,
 		getMovieDetailsStmt:              q.getMovieDetailsStmt,
+		getMoviesByNameStmt:              q.getMoviesByNameStmt,
+		getRandomMovieStmt:               q.getRandomMovieStmt,
 		updateMovieEmbeddingStmt:         q.updateMovieEmbeddingStmt,
 		upsertCastMemberStmt:             q.upsertCastMemberStmt,
 		upsertCollectionStmt:             q.upsertCollectionStmt,

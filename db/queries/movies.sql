@@ -39,14 +39,27 @@ SELECT * FROM movies
 ORDER BY id
 LIMIT $1 OFFSET $2;
 
+-- name: GetMoviesByName :many
+SELECT *
+FROM movies
+WHERE title ILIKE '%' || $1 || '%'
+ORDER BY popularity DESC
+LIMIT $2 OFFSET $3;
+
 -- name: GetMovie :one
 SELECT * FROM movies
 WHERE id = $1;
 
+-- name: GetRandomMovie :one
+SELECT *
+FROM movies
+ORDER BY RANDOM()
+LIMIT 1;
+
 -- name: FindSimilarMovies :many
 SELECT * FROM movies
 ORDER BY embedding <=> $1
-LIMIT 10; 
+LIMIT 30; 
 
 -- name: GetMovieDetails :one
 WITH cast_members_agg AS (
